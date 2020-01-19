@@ -1,0 +1,47 @@
+{
+  "name": "react-file-upload",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc",
+    "start:client": "cd client && npm start",
+    "start:server": "nodemon --watch src --exec ts-node src/server.ts",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "keywords": [],
+  "author": "dpyzo0o",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/busboy": "^0.2.3",
+    "@types/node": "^13.1.7",
+    "concurrently": "^5.0.2",
+    "husky": "^4.0.10",
+    "lint-staged": "^9.5.0",
+    "nodemon": "^2.0.2",
+    "prettier": "^1.19.1",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.7.4"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "printWidth": 100
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{css,json,md,ts,tsx}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "dependencies": {
+    "busboy": "^0.3.1"
+  }
+}
