@@ -1,4 +1,24 @@
 .app {
   width: 100%;
-  text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btn-wrapper {
+  width: 50%;
+  display: flex;
+  justify-content: space-evenly;
+  margin: 20px 0;
+}
+
+.progress {
+  width: 80%;
+  margin: 10px 0;
+}
+
+.file {
+  width: 80%;
+  margin: 10px 0;
 }

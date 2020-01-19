@@ -1,6 +1,7 @@
 import http, { IncomingMessage, ServerResponse } from 'http';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import Busboy from 'busboy';
 
 const port = 3001;
@@ -39,7 +40,7 @@ async function verifyHandler(req: IncomingMessage, res: ServerResponse) {
   }
 
   const { fileName, fileHash } = await parseBody(req);
-  const filePath = path.join(uploadDir, `${fileHash}${path.extname(fileName)}`);
+  const filePath = path.join(uploadDir, fileName);
   let data: VerifyResponse = { shouldUpload: false, uploadedChunks: [] };
 
   if (!fs.existsSync(filePath)) {
@@ -53,12 +54,16 @@ async function verifyHandler(req: IncomingMessage, res: ServerResponse) {
   res.end(JSON.stringify(data));
 }
 
-function uploadHandler(req: IncomingMessage, res: ServerResponse) {
+async function uploadHandler(req: IncomingMessage, res: ServerResponse) {
   const busboy = new Busboy({ headers: req.headers });
   let fileName: string;
   let fileHash: string;
   let chunkHash: string;
 
+  /**
+   * 'filed' event is fired before 'file' event provided that
+   * non-file filed is placed before file filed in FormData
+   */
   busboy.on('field', (fieldname, val) => {
     if (fieldname === 'fileName') {
       fileName = val;
@@ -83,8 +88,13 @@ function uploadHandler(req: IncomingMessage, res: ServerResponse) {
       fs.mkdirSync(chunkDir, { recursive: true });
     }
 
+    // save to system temp dir first, then move to upload dir
     const saveTo = path.join(chunkDir, chunkHash);
-    file.pipe(fs.createWriteStream(saveTo));
+    const tmpSaveTo = path.join(os.tmpdir(), chunkHash);
+    const stream = fs.createWriteStream(tmpSaveTo);
+    stream.on('finish', () => fs.renameSync(tmpSaveTo, saveTo));
+
+    file.pipe(stream);
   });
 
   busboy.on('finish', () => {
@@ -97,7 +107,7 @@ function uploadHandler(req: IncomingMessage, res: ServerResponse) {
 
 async function mergeHandler(req: IncomingMessage, res: ServerResponse) {
   const { fileName, fileHash } = await parseBody(req);
-  const filePath = path.join(uploadDir, `${fileHash}${path.extname(fileName)}`);
+  const filePath = path.join(uploadDir, fileName);
   const chunkDir = path.join(uploadDir, fileHash);
 
   fs.readdirSync(chunkDir).forEach(chunk => {
@@ -112,7 +122,7 @@ async function mergeHandler(req: IncomingMessage, res: ServerResponse) {
   res.end('file chunks merged');
 }
 
-function defaultHandler(req: IncomingMessage, res: ServerResponse) {
+async function defaultHandler(req: IncomingMessage, res: ServerResponse) {
   res.statusCode = 200;
   res.end('hello world');
 }

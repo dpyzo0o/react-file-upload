@@ -13,6 +13,9 @@
   "keywords": [],
   "author": "dpyzo0o",
   "license": "ISC",
+  "dependencies": {
+    "busboy": "^0.3.1"
+  },
   "devDependencies": {
     "@types/busboy": "^0.2.3",
     "@types/node": "^13.1.7",
@@ -40,8 +43,5 @@
       "prettier --write",
       "git add"
     ]
-  },
-  "dependencies": {
-    "busboy": "^0.3.1"
   }
 }
