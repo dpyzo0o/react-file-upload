@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
-import { Button, LinearProgress, Snackbar } from '@material-ui/core';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Button,
+  LinearProgress,
+  Snackbar,
+  Paper,
+  AppBar,
+  Toolbar,
+  Typography,
+  Container,
+} from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
+import { CloudUpload } from '@material-ui/icons';
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import createWorker from 'workerize-loader!./worker';
 import * as worker from './worker';
-
-import './App.css';
-import { stat } from 'fs';
 
 interface FileChunk {
   chunk: Blob;
@@ -31,13 +38,14 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<UploadStatus>(UploadStatus.INITIAL);
   const [ongoingRequests, setOngoingRequests] = useState<XMLHttpRequest[]>([]);
   const [open, setOpen] = useState(false);
+  const [fakeTotalPercentage, setFakeTotalPercentage] = useState(0);
 
-  const totalPercentage = React.useMemo(() => {
+  const totalPercentage = useMemo(() => {
     if (status === UploadStatus.SUCCESS) {
       return 100;
     }
 
-    if (!fileChunks.length) {
+    if (!fileChunks.length || status === UploadStatus.INITIAL) {
       return 0;
     }
 
@@ -47,7 +55,7 @@ const App: React.FC = () => {
     return chunkUploadPercentage - 5;
   }, [fileChunks, status]);
 
-  const uploadDisabled = React.useMemo(
+  const uploadDisabled = useMemo(
     () =>
       !file ||
       status === UploadStatus.PENDING ||
@@ -56,61 +64,88 @@ const App: React.FC = () => {
     [file, status]
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (status === UploadStatus.SUCCESS) {
       setOpen(true);
     }
   }, [status]);
 
+  useEffect(() => {
+    if (totalPercentage > fakeTotalPercentage || totalPercentage === 0) {
+      setFakeTotalPercentage(totalPercentage);
+    }
+  }, [totalPercentage, fakeTotalPercentage]);
+
   return (
-    <div className="app">
-      <h2>React File Upload</h2>
-      <input type="file" onChange={handleFileChange} />
-      <div className="btn-wrapper">
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleUpload}
-          disabled={uploadDisabled}
+    <Paper elevation={0} style={{ padding: 0, margin: 0 }}>
+      <AppBar color="primary" position="static">
+        <Toolbar>
+          <Typography color="inherit" variant="h6">
+            React File Upload
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <Container style={{ padding: 16 }}>
+        <input
+          id="contained-button-file"
+          type="file"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        <label htmlFor="contained-button-file">
+          <Button variant="contained" component="span" color="primary" startIcon={<CloudUpload />}>
+            choose file
+          </Button>
+        </label>
+        <span>{file?.name}</span>
+        <Container style={{ padding: 0, margin: '16px 0' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleUpload}
+            disabled={uploadDisabled}
+            style={{ marginRight: 16 }}
+          >
+            Upload
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handlePause}
+            disabled={status !== UploadStatus.PAUSED && status !== UploadStatus.PENDING}
+          >
+            {status === UploadStatus.PAUSED ? 'resume' : 'pause'}
+          </Button>
+        </Container>
+        <Container style={{ padding: 0 }}>
+          <div>hash progress: {Math.floor(hashPercentage)}%</div>
+          <LinearProgress variant="determinate" value={hashPercentage} />
+          <div>total progress: {Math.floor(fakeTotalPercentage)}%</div>
+          <LinearProgress variant="determinate" value={fakeTotalPercentage} />
+        </Container>
+        {fileChunks.map(fileChunk => (
+          <Container key={fileChunk.chunkIndex} style={{ padding: 0 }}>
+            <div>
+              chunk - {fileChunk.chunkIndex}: {Math.floor(fileChunk.uploadPercentage)}%
+            </div>
+            <LinearProgress variant="determinate" value={fileChunk.uploadPercentage} />
+          </Container>
+        ))}
+        <Snackbar
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          open={open}
+          onClose={() => setOpen(false)}
+          autoHideDuration={3000}
         >
-          Upload
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handlePause}
-          disabled={status !== UploadStatus.PAUSED && status !== UploadStatus.PENDING}
-        >
-          {status === UploadStatus.PAUSED ? 'resume' : 'pause'}
-        </Button>
-      </div>
-      <div className="progress">
-        hash progress
-        <LinearProgress variant="determinate" value={hashPercentage} />
-      </div>
-      <div className="progress">
-        total progress
-        <LinearProgress variant="determinate" value={totalPercentage} />
-      </div>
-      {fileChunks.map(fileChunk => (
-        <div className="file" key={fileChunk.chunkIndex}>
-          chunk - {fileChunk.chunkIndex}
-          <LinearProgress variant="determinate" value={fileChunk.uploadPercentage} />
-        </div>
-      ))}
-      <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        open={open}
-        onClose={() => setOpen(false)}
-        autoHideDuration={2500}
-      >
-        <Alert severity="success">上传成功</Alert>
-      </Snackbar>
-    </div>
+          <Alert severity="success">上传成功</Alert>
+        </Snackbar>
+      </Container>
+    </Paper>
   );
 
   function resetState() {
     setHashPercentage(0);
+    setStatus(UploadStatus.INITIAL);
     setFileChunks([]);
   }
 

@@ -14,6 +14,7 @@
   "author": "dpyzo0o",
   "license": "ISC",
   "dependencies": {
+    "@material-ui/icons": "^4.5.1",
     "busboy": "^0.3.1"
   },
   "devDependencies": {
